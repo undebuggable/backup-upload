@@ -1,4 +1,4 @@
-Prerequisities/Requirements
+Requirements
 ------------
 
 Setup the CLI clients for the cloud service provider.
@@ -38,31 +38,47 @@ The bucket permissions most likely should be configured to private ie. non world
 Running the application
 ------------
 
-The toolset provide *create*, *read*, and *delete* operations on the backup:
-- create - `backup_encrypt_upload.sh`, `backup_encrypt_upload_parallel.sh`
-- read - `backup_download.sh`
-- delete - `backup_delete.sh`
-Test the  existence of backup with `backup_test.sh`.
+Create the configuration file `backup.config` in the root directory of this project:
+
+```bash
+AWS_PROFILE="<awc_cli_profile_name>"
+
+GPG_RECIPIENT="<gpg_receipient_email>"
+
+PATH_STORAGE_AWS="s3://<bucket_name>"
+PATH_STORAGE_LINODE="<bucket_name>"
+PATH_STORAGE_BACKBLAZE="<bucket_name>"
+
+PATH_LOCAL_BASEDIR="/tmp"
+
+PATH_LOCAL_UPLOAD_AWS=$PATH_LOCAL_BASEDIR"/backup-upload"
+PATH_LOCAL_UPLOAD_LINODE=$PATH_LOCAL_BASEDIR"/backup-upload"
+PATH_LOCAL_UPLOAD_BACKBLAZE=$PATH_LOCAL_BASEDIR"/backup-upload"
+
+PATH_LOCAL_DOWNLOAD_AWS=$PATH_LOCAL_BASEDIR"/backup-download"
+PATH_LOCAL_DOWNLOAD_LINODE=$PATH_LOCAL_BASEDIR"/backup-download"
+PATH_LOCAL_DOWNLOAD_BACKBLAZE=$PATH_LOCAL_BASEDIR"/backup-download"
+```
 
 Encrypt files in a directory specified with parameter `-b` and upload them to object storage on Linode. The backup dictionary file will be saved in file specified by the parameter `-l`.
 
-The encryption and uploading will be handled by two parallel processes:
+Encrypt and upload the files with two parallel processes:
 ```bash
 backup_encrypt_upload_parallel.sh -m linode -b ~/backup -l ~/backup.log
 ```
-Encrypt and then upload the files sequentially:
+Alternatively, encrypt and then upload the files sequentially:
 ```bash
-backup_encrypt_upload_parallel.sh -m linode -b ~/backup -l ~/backup.log
+backup_encrypt_upload.sh -m linode -b ~/backup -l ~/backup.log
 ```
-Test the existence of backup:
+Test the existence of backup described by the dictionary file `backup.log`:
 ```bash
 backup_test.sh -m linode -l ~/backup.log
 ```
-Download the backup described by the dictionary file:
+Download the backup described by the dictionary file `backup.log`:
 ```bash
 backup_download.sh -m linode -l ~/backup.log
 ```
-Delete the backup from the object storage:
+Delete from object storage the backup described by the dictionary file `backup.log`:
 ```bash
-`backup_delete.sh` -m linode -l ~/backup.log
+backup_delete.sh -m linode -l ~/backup.log
 ```
