@@ -14,7 +14,7 @@ aws --profile <aws_cli_profile> s3 ls
 
 ### Linode object storage
 
-[Setup the CLI client for Linode object storage.](https://www.linode.com/docs/guides/how-to-use-object-storage/) The `s3cmd` client is also needed in addition to the Linode's `linode-cli`. The `s3cmd` client will transparently take care of Linode's limit of 5GB per one object,
+[Setup the CLI client for Linode object storage.](https://www.linode.com/docs/guides/how-to-use-object-storage/) The `s3cmd` client is also needed in addition to the Linode's `linode-cli`. The `s3cmd` client will transparently take care of Linode's limit of 5GB per one object.
 
 Test the CLI client and the presence of backup bucket:
 ```bash
@@ -60,21 +60,21 @@ PATH_LOCAL_DOWNLOAD_LINODE=$PATH_LOCAL_BASEDIR"/backup-download"
 PATH_LOCAL_DOWNLOAD_BACKBLAZE=$PATH_LOCAL_BASEDIR"/backup-download"
 ```
 
-Encrypt files in a directory specified with parameter `-b` and upload them to object storage on Linode. The backup dictionary file will be saved in file specified by the parameter `-l`.
+Encrypt files in directory `~/backup` and upload them to the Linode object storage. The backup dictionary file will be saved in file `~/backup.log`.
 
-Encrypt and upload the files with two parallel processes:
+Encrypt and upload files with two parallel processes:
 ```bash
 backup_encrypt_upload_parallel.sh -m linode -b ~/backup -l ~/backup.log
 ```
-Alternatively, encrypt and then upload the files sequentially:
+Alternatively, encrypt and then upload files sequentially:
 ```bash
 backup_encrypt_upload.sh -m linode -b ~/backup -l ~/backup.log
 ```
-Test the existence of backup described by the dictionary file `backup.log`:
+Browse contents of backup described by the dictionary file `backup.log`:
 ```bash
-backup_test.sh -m linode -l ~/backup.log
+backup_browse.sh -m linode -l ~/backup.log
 ```
-Download the backup described by the dictionary file `backup.log`:
+Download backup described by the dictionary file `backup.log`:
 ```bash
 backup_download.sh -m linode -l ~/backup.log
 ```
