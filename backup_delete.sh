@@ -159,8 +159,13 @@ function run ()
 {
     load_config
     args_validate
-    requirements
-    parse_logfile
+    if [ $? -eq 1 ]
+    then
+      requirements
+      parse_logfile
+    else
+      echo "[✗] Invalid arguments"
+    fi
 }
 
 run

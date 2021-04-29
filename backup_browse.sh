@@ -166,12 +166,12 @@ function run ()
 {
     load_config
     args_validate
-    code_validation=$?
-    if [[ $code_validation = 0 ]];then
-        requirements
-        parse_logfile
+    if [ $? -eq 1 ]
+    then
+      requirements
+      parse_logfile
     else
-        echo "[✗] Invalid arguments"
+      echo "[✗] Invalid arguments"
     fi
 }
 

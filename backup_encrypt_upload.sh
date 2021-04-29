@@ -231,10 +231,15 @@ function run ()
     load_config
     detect_os
     args_validate
-    requirements
-    sh $PATH_CURRENT/_backup_mkdirs.sh -m $CONFIG_MODE
-    create_file_list
-    process_backup_files
+    if [ $? -eq 1 ]
+    then
+      requirements
+      sh $PATH_CURRENT/_backup_mkdirs.sh -m $CONFIG_MODE
+      create_file_list
+      process_backup_files
+    else
+      echo "[✗] Invalid arguments"
+    fi
 }
 
 run

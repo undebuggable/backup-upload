@@ -8,6 +8,8 @@ REGEX_MODES='aws|linode|backblaze'
 
 PATH_LOCAL_DOWNLOAD=""
 PATH_LOCAL_UPLOAD=""
+PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
 
 CONFIG_MODE=""
 
@@ -71,7 +73,12 @@ function run ()
 {
     load_config
     args_validate
-    mkdirs
+    if [ $? -eq 1 ]
+    then
+      mkdirs
+    else
+      echo "[✗] Invalid arguments"
+    fi
 }
 
 run

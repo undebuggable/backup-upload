@@ -241,14 +241,19 @@ function run ()
     load_config
     detect_os
     args_validate
-    requirements
-    sh $PATH_CURRENT/_backup_mkdirs.sh -m $CONFIG_MODE
-    create_file_list
-    encrypt &
-    pid_encrypt=$!
-    upload &
-    pid_upload=$!
-    wait $pid_encrypt $pid_upload
+    if [ $? -eq 1 ]
+    then
+      requirements
+      sh $PATH_CURRENT/_backup_mkdirs.sh -m $CONFIG_MODE
+      create_file_list
+      encrypt &
+      pid_encrypt=$!
+      upload &
+      pid_upload=$!
+      wait $pid_encrypt $pid_upload
+    else
+      echo "[✗] Invalid arguments"
+    fi
 }
 
 run
