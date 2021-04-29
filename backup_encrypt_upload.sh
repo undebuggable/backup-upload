@@ -231,7 +231,7 @@ function run ()
     load_config
     detect_os
     args_validate
-    if [ $? -eq 1 ]
+    if [ $? -eq 0 ]
     then
       requirements
       sh $PATH_CURRENT/_backup_mkdirs.sh -m $CONFIG_MODE

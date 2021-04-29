@@ -179,7 +179,7 @@ function run ()
 {
     load_config
     args_validate
-    if [ $? -eq 1 ]
+    if [ $? -eq 0 ]
     then
       requirements
       parse_logfile
