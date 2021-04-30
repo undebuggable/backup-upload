@@ -92,7 +92,8 @@ function requirements ()
 function args_validate ()
 {
     return_code=0
-    CONFIG_PATH_BACKUP=$ARG_PATH_BACKUP;
+    # add trailing slash if doesn't exist
+    CONFIG_PATH_BACKUP="$(echo $ARG_PATH_BACKUP | sed 's![^/]$!&/!')"
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
@@ -103,6 +104,10 @@ function args_validate ()
         return_code=1
     else
         CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
+    fi
+    if [[ ! -d "$CONFIG_PATH_BACKUP" ]]; then
+        echo "[✗] The directory to be backup up does not exists "$CONFIG_PATH_BACKUP
+        return_code=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
         PATH_STORAGE=$PATH_STORAGE_LINODE
@@ -132,12 +137,22 @@ function detect_os ()
 
 function os_gpg ()
 {
+
   path_encrypt="$1"
+  path_destination="$2"
   if [[ $OS_CURRENT = $OS_LINUX ]]; then
-        gpg2 --trust-model always -e -r $GPG_RECIPIENT $path_encrypt;
+        gpg2 \
+          --trust-model always \
+          -e -r $GPG_RECIPIENT \
+          -o $path_destination \
+          $path_encrypt;
   fi
   if [[ $OS_CURRENT = $OS_MACOS ]]; then
-        gpg --trust-model always -e -r $GPG_RECIPIENT $path_encrypt;
+        gpg \
+          --trust-model always \
+          -e -r $GPG_RECIPIENT \
+          -o $path_destination \
+          $path_encrypt;
   fi
 }
 
@@ -207,9 +222,8 @@ function encrypt ()
     sha256sum $path_backup >> $CONFIG_PATH_LOGFILE;
     echo $UUID_CURRENT >> $CONFIG_PATH_LOGFILE;
     echo "[→] Encrypting "$path_backup;
-    os_gpg $path_backup
+    os_gpg $path_backup $PATH_LOCAL_UPLOAD/$filename_uui;
     rm -f $path_backup;
-    mv $path_backup.gpg $PATH_LOCAL_UPLOAD/$UUID_CURRENT;
 }
 
 function process_backup_files ()

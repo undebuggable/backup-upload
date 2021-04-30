@@ -13,6 +13,10 @@ FILES_TOTAL=0
 
 declare -a ARR_PATH=()
 declare -a ARR_UUID=()
+declare -a ARR_STATUS=()
+
+STATUS_PLAINTEXT=-1
+STATUS_ENCRYPTED=0
 
 OS_MACOS=0
 OS_LINUX=1
@@ -92,7 +96,8 @@ function requirements ()
 function args_validate ()
 {
     return_code=0
-    CONFIG_PATH_BACKUP=$ARG_PATH_BACKUP;
+    # add trailing slash if doesn't exist
+    CONFIG_PATH_BACKUP="$(echo $ARG_PATH_BACKUP | sed 's![^/]$!&/!')"
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
@@ -103,6 +108,10 @@ function args_validate ()
         return_code=1
     else
         CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
+    fi
+    if [[ ! -d "$CONFIG_PATH_BACKUP" ]]; then
+        echo "[✗] The directory to be backup up does not exists "$CONFIG_PATH_BACKUP
+        return_code=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
         PATH_STORAGE=$PATH_STORAGE_LINODE
@@ -156,11 +165,20 @@ function os_uuid ()
 function os_gpg ()
 {
   path_encrypt="$1"
+  path_destination="$2"
   if [[ $OS_CURRENT = $OS_LINUX ]]; then
-        gpg2 --trust-model always -e -r $GPG_RECIPIENT $path_encrypt;
+        gpg2 \
+          --trust-model always \
+          -e -r $GPG_RECIPIENT \
+          -o $path_destination \
+          $path_encrypt;
   fi
   if [[ $OS_CURRENT = $OS_MACOS ]]; then
-        gpg --trust-model always -e -r $GPG_RECIPIENT $path_encrypt;
+        gpg \
+          --trust-model always \
+          -e -r $GPG_RECIPIENT \
+          -o $path_destination \
+          $path_encrypt;
   fi
 }
 
@@ -173,6 +191,7 @@ function create_file_list ()
         if [[ -f $path_backup ]];then
             os_uuid $((FILES_TOTAL));
             ARR_PATH[$((FILES_TOTAL))]=$path_backup
+            ARR_STATUS[$((FILES_TOTAL))]=$STATUS_PLAINTEXT
             FILES_TOTAL=$((FILES_TOTAL+1))
         fi
     done
@@ -191,10 +210,10 @@ function encrypt ()
         sha256sum $path_backup >> $CONFIG_PATH_LOGFILE;
         echo $filename_uui >> $CONFIG_PATH_LOGFILE;
         echo "[→] Encrypting "$path_backup;
-        os_gpg $path_backup
+        os_gpg $path_backup $PATH_LOCAL_UPLOAD/$filename_uui;
         rm -f $path_backup;
-        mv $path_backup.gpg $PATH_LOCAL_UPLOAD/$filename_uui;
         echo "[✔] Encryption complete "$path_backup;
+        ARR_STATUS[$((counter))]=$STATUS_ENCRYPTED
         counter=$((counter-1))
     done
 }
@@ -204,9 +223,10 @@ function upload ()
     counter=$((FILES_TOTAL-1))
     while [ $counter -ge 0 ]; do
         path_backup=${ARR_PATH[$counter]}
+        path_status=${ARR_STATUS[$counter]}
         filename_uui=${ARR_UUID[$counter]}
         path_to_upload=$PATH_LOCAL_UPLOAD/$filename_uui
-        if [[ -f $path_to_upload ]];then
+        if [[ $path_status = $STATUS_ENCRYPTED ]] && [[ -f $path_to_upload ]];then
             echo "[→] Uploading "$path_backup;
             if [[ $CONFIG_MODE = $MODE_LINODE ]];then
                 # s3cmd will transparently take care of
