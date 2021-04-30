@@ -13,7 +13,6 @@ FILES_TOTAL=0
 
 declare -a ARR_PATH=()
 declare -a ARR_UUID=()
-declare -a ARR_STATUS=()
 
 STATUS_PLAINTEXT=-1
 STATUS_ENCRYPTED=0
@@ -191,7 +190,6 @@ function create_file_list ()
         if [[ -f $path_backup ]];then
             os_uuid $((FILES_TOTAL));
             ARR_PATH[$((FILES_TOTAL))]=$path_backup
-            ARR_STATUS[$((FILES_TOTAL))]=$STATUS_PLAINTEXT
             FILES_TOTAL=$((FILES_TOTAL+1))
         fi
     done
@@ -211,9 +209,9 @@ function encrypt ()
         echo $filename_uui >> $CONFIG_PATH_LOGFILE;
         echo "[→] Encrypting "$path_backup;
         os_gpg $path_backup $PATH_LOCAL_UPLOAD/$filename_uui;
+        mv $PATH_LOCAL_UPLOAD/$filename_uui $PATH_LOCAL_UPLOAD/$filename_uui"✔"
         rm -f $path_backup;
         echo "[✔] Encryption complete "$path_backup;
-        ARR_STATUS[$((counter))]=$STATUS_ENCRYPTED
         counter=$((counter-1))
     done
 }
@@ -223,10 +221,10 @@ function upload ()
     counter=$((FILES_TOTAL-1))
     while [ $counter -ge 0 ]; do
         path_backup=${ARR_PATH[$counter]}
-        path_status=${ARR_STATUS[$counter]}
         filename_uui=${ARR_UUID[$counter]}
         path_to_upload=$PATH_LOCAL_UPLOAD/$filename_uui
-        if [[ $path_status = $STATUS_ENCRYPTED ]] && [[ -f $path_to_upload ]];then
+        if [[ -f $path_to_upload"✔" ]];then
+            mv $path_to_upload"✔" $path_to_upload
             echo "[→] Uploading "$path_backup;
             if [[ $CONFIG_MODE = $MODE_LINODE ]];then
                 # s3cmd will transparently take care of
