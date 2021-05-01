@@ -37,6 +37,8 @@ PATH_LOCAL_UPLOAD=""
 PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
 
+EXIT_CODE_SUCCESS=0
+
 while [[ $# -gt 0 ]]
 do
 key="$1"
@@ -91,23 +93,23 @@ function requirements ()
 
 function args_validate ()
 {
-    return_code=0
+    exit_code_args=$EXIT_CODE_SUCCESS
     # add trailing slash if doesn't exist
     CONFIG_PATH_BACKUP="$(echo $ARG_PATH_BACKUP | sed 's![^/]$!&/!')"
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
-        return_code=1
+        exit_code_args=1
     fi
     if [[ -f "$ARG_PATH_LOGFILE" ]];then
         echo "[✗] The backup dictionary file already exists "$ARG_PATH_LOGFILE
-        return_code=1
+        exit_code_args=1
     else
         CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
     fi
     if [[ ! -d "$CONFIG_PATH_BACKUP" ]]; then
-        echo "[✗] The directory to be backup up does not exists "$CONFIG_PATH_BACKUP
-        return_code=1
+        echo "[✗] The directory to be backed up does not exists "$CONFIG_PATH_BACKUP
+        exit_code_args=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
         PATH_STORAGE=$PATH_STORAGE_LINODE
@@ -121,7 +123,7 @@ function args_validate ()
         PATH_STORAGE=$PATH_STORAGE_BACKBLAZE
         PATH_LOCAL_UPLOAD=$PATH_LOCAL_UPLOAD_BACKBLAZE
     fi
-    return $return_code
+    return $exit_code_args
 }
 
 function detect_os ()
@@ -137,23 +139,26 @@ function detect_os ()
 
 function os_gpg ()
 {
-
   path_encrypt="$1"
   path_destination="$2"
+  exit_code_gpg=1
   if [[ $OS_CURRENT = $OS_LINUX ]]; then
-        gpg2 \
-          --trust-model always \
-          -e -r $GPG_RECIPIENT \
-          -o $path_destination \
-          $path_encrypt;
+    gpg2 \
+      --trust-model always \
+      -e -r $GPG_RECIPIENT \
+      -o $path_destination \
+      $path_encrypt;
+    exit_code_gpg=$?
   fi
   if [[ $OS_CURRENT = $OS_MACOS ]]; then
-        gpg \
-          --trust-model always \
-          -e -r $GPG_RECIPIENT \
-          -o $path_destination \
-          $path_encrypt;
+    gpg \
+      --trust-model always \
+      -e -r $GPG_RECIPIENT \
+      -o $path_destination \
+      $path_encrypt;
+    exit_code_gpg=$?
   fi
+  return $exit_code_gpg
 }
 
 function os_uuid ()
@@ -203,13 +208,13 @@ function upload ()
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
         b2 upload-file $PATH_STORAGE $path_to_upload $UUID_CURRENT;
     fi
-    upload_exit_code=$?
-    if [[ $upload_exit_code = 0 ]]; then
+    exit_code_upload=$?
+    if [[ $exit_code_upload = $EXIT_CODE_SUCCESS ]]; then
         echo "[✔] Object uploaded"
         if [[ -f $path_to_upload ]];then
             rm -f $path_to_upload
         fi
-    elif [[ $upload_exit_code = 1 ]]; then
+    elif [[ $exit_code_upload = 1 ]]; then
         echo "[✗] Object upload failed"
     fi
 }
@@ -223,7 +228,13 @@ function encrypt ()
     echo $UUID_CURRENT >> $CONFIG_PATH_LOGFILE;
     echo "[→] Encrypting "$path_backup;
     os_gpg $path_backup $PATH_LOCAL_UPLOAD/$filename_uui;
-    rm -f $path_backup;
+    exit_code_encrypt=$?
+    if [[ $exit_code_encrypt = $EXIT_CODE_SUCCESS ]]; then
+      rm -f $path_backup;
+      echo "[✔] Encryption complete "$path_backup;
+    else
+      echo "[✗] Encryption failed "$path_backup;
+    fi
 }
 
 function process_backup_files ()

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# result of `ls` separated with newline for easier iteration
+IFS='
+'
+
 MODE_AWS="aws"
 MODE_LINODE="linode"
 MODE_BACKBLAZE="backblaze"
@@ -16,6 +20,17 @@ CONFIG_PATH_LOGFILE=""
 PATH_STORAGE=""
 PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
+
+COUNT_FILES_TOTAL=0
+COUNT_FILES_FOUND=0
+COUNT_FILES_NOT_FOUND=0
+
+B2_BUCKETS=""
+AWS_PROFILE=gjpl
+PATH_BUCKET_DETAILS=$HOME/src/src.ow.cx-infra/b2-buckets
+DATE=$(date +"%Y-%m-%d_%H-%M")
+
+EXIT_CODE_SUCCESS=0
 
 while [[ $# -gt 0 ]]
 do
@@ -40,13 +55,31 @@ function load_config ()
     fi
 }
 
+function requirements ()
+{
+    if [[ $CONFIG_MODE = $MODE_LINODE ]];then
+        type linode-cli
+    fi
+    if [[ $CONFIG_MODE = $MODE_AWS ]];then
+        type aws
+    fi
+    if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
+        type b2
+    fi
+}
+
 function args_validate ()
 {
     exit_code_args=$EXIT_CODE_SUCCESS
-    CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
+        exit_code_args=1
+    fi
+    if [[ -f "$ARG_PATH_LOGFILE" ]];then
+        CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
+    else
+        echo "[✗] The backup dictionary file doesn't exist "$ARG_PATH_LOGFILE
         exit_code_args=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
@@ -59,19 +92,6 @@ function args_validate ()
         PATH_STORAGE=$PATH_STORAGE_BACKBLAZE
     fi
     return $exit_code_args
-}
-
-requirements ()
-{
-    if [[ $CONFIG_MODE = $MODE_LINODE ]];then
-        type s3cmd
-    fi
-    if [[ $CONFIG_MODE = $MODE_AWS ]];then
-        type aws
-    fi
-    if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-        type b2
-    fi
 }
 
 function check_file ()
@@ -101,33 +121,24 @@ function parse_logfile_item ()
     filename_plaintext="$1"
     filename_obscured="$2"
     if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
+        COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
         check_file $PATH_STORAGE $filename_obscured
         exit_code_ls=$?
         if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
+            COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))
             echo \
-                "[→] Removing the existing object from the cloud storage "\
+                "[✔] Object exists on cloud storage "\
                 $filename_plaintext $filename_obscured
-            if [[ $CONFIG_MODE = $MODE_LINODE ]];then
-                linode-cli obj rm $PATH_STORAGE $filename_obscured
-            fi
-            if [[ $CONFIG_MODE = $MODE_AWS ]];then
-                aws --profile $AWS_PROFILE s3 rm $PATH_STORAGE/$filename_obscured
-            fi
-            if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-                file_id=$(\
-                    b2 ls --long $path_storage_base | \
-                    grep $filename_obscured | \
-                    awk '{print $1}'\
-                )
-                b2 delete-file-version $file_id
-            fi
         elif [[ $exit_code_ls = 1 ]]; then
+            COUNT_FILES_NOT_FOUND=$((COUNT_FILES_NOT_FOUND+1))
             echo \
                 "[✗] Object does not exist on cloud storage "\
                 $filename_plaintext $filename_obscured
         fi
     else
-        echo "[✗] No obscured filename found for log entry "$filename_plaintext
+        echo \
+          "[✗] No obscured filename found for log entry "\
+          $filename_plaintext
     fi
 }
 
@@ -140,9 +151,39 @@ function parse_logfile ()
         read filename_obscured <&3
         parse_logfile_item $filename_plaintext $filename_obscured
     done
-
     # Close file handle 3
     exec 3<&-
+
+    echo "[i] ("\
+        $COUNT_FILES_FOUND\
+        "of"\
+        $COUNT_FILES_TOTAL\
+        ") objects found on the cloud storage"
+    echo "[i] ("\
+        $COUNT_FILES_NOT_FOUND\
+        "of"\
+        $COUNT_FILES_TOTAL\
+        ") objects not found on the cloud storage"
+}
+
+function buckets_fetch_list ()
+{
+    B2_BUCKETS=$(\
+        b2 list-buckets
+    )
+
+}
+function buckets_summarize ()
+{
+    for bucket_item in $B2_BUCKETS; do
+        bucket_name=$(echo $bucket_item | awk '{print $3}');
+        b2 ls --long --recursive $bucket_name \
+        > $PATH_BUCKET_DETAILS/$bucket_name-ls-$DATE.log
+        b2 ls --long --recursive --json $bucket_name \
+        > $PATH_BUCKET_DETAILS/$bucket_name-ls-$DATE.json
+        b2 get-bucket $bucket_name \
+        > $PATH_BUCKET_DETAILS/$bucket_name-get-bucket-$DATE.log
+    done
 }
 
 function run ()

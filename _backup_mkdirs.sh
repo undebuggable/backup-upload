@@ -13,6 +13,8 @@ PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
 
 CONFIG_MODE=""
 
+EXIT_CODE_SUCCESS=0
+
 while [[ $# -gt 0 ]]
 do
 key="$1"

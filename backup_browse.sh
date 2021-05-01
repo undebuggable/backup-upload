@@ -21,6 +21,8 @@ COUNT_FILES_TOTAL=0
 COUNT_FILES_FOUND=0
 COUNT_FILES_NOT_FOUND=0
 
+EXIT_CODE_SUCCESS=0
+
 while [[ $# -gt 0 ]]
 do
 key="$1"
@@ -59,17 +61,17 @@ function requirements ()
 
 function args_validate ()
 {
-    return_code=0
+    exit_code_args=$EXIT_CODE_SUCCESS
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
-        return_code=1
+        exit_code_args=1
     fi
     if [[ -f "$ARG_PATH_LOGFILE" ]];then
         CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
     else
         echo "[✗] The backup dictionary file doesn't exist "$ARG_PATH_LOGFILE
-        return_code=1
+        exit_code_args=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
         PATH_STORAGE=$PATH_STORAGE_LINODE
@@ -80,7 +82,7 @@ function args_validate ()
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
         PATH_STORAGE=$PATH_STORAGE_BACKBLAZE
     fi
-    return $return_code
+    return $exit_code_args
 }
 
 function check_file ()
@@ -88,30 +90,21 @@ function check_file ()
     path_storage_base="$1"
     filename_obscured="$2"
     path_storage=$path_storage_base/$filename_obscured
-    aws_ls_retval=-1
+    exit_code_ls=-1
     echo "[→] Checking on cloud storage for path "$path_storage
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
-        linode_ls_ret=$(linode-cli obj ls $path_storage | grep $filename_obscured)
-        if [[ $linode_ls_ret = "" ]];then
-            aws_ls_retval=1
-        else
-            aws_ls_retval=0
-        fi
+      linode-cli obj ls $path_storage | grep $filename_obscured &> /dev/null
+      exit_code_ls=$?
     fi
     if [[ $CONFIG_MODE = $MODE_AWS ]];then
-        aws --profile $AWS_PROFILE s3 ls $path_storage
-        aws_ls_retval=$?
+      aws --profile $AWS_PROFILE s3 ls $path_storage
+      exit_code_ls=$?
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-        backblaze_ls_ret=$(b2 ls $path_storage_base | grep $filename_obscured)
-        if [[ $backblaze_ls_ret = "" ]];then
-            aws_ls_retval=1
-        else
-            aws_ls_retval=0
-        fi
-
+      b2 ls $path_storage_base | grep $filename_obscured &> /dev/null
+      exit_code_ls=$?
     fi
-    return $aws_ls_retval
+    return $exit_code_ls
 }
 
 function parse_logfile_item ()
@@ -121,13 +114,13 @@ function parse_logfile_item ()
     if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
         COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
         check_file $PATH_STORAGE $filename_obscured
-        aws_ls_retval=$?
-        if [[ $aws_ls_retval = 0 ]]; then
+        exit_code_ls=$?
+        if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
             COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))
             echo \
                 "[✔] Object exists on cloud storage "\
                 $filename_plaintext $filename_obscured
-        elif [[ $aws_ls_retval = 1 ]]; then
+        elif [[ $exit_code_ls = 1 ]]; then
             COUNT_FILES_NOT_FOUND=$((COUNT_FILES_NOT_FOUND+1))
             echo \
                 "[✗] Object does not exist on cloud storage "\

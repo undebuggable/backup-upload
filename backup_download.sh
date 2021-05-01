@@ -18,6 +18,8 @@ PATH_LOCAL_DOWNLOAD=""
 PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
 
+EXIT_CODE_SUCCESS=0
+
 while [[ $# -gt 0 ]]
 do
 key="$1"
@@ -43,17 +45,17 @@ function load_config ()
 
 function args_validate ()
 {
-    return_code=0
+    exit_code_args=$EXIT_CODE_SUCCESS
     if [[ "$ARG_MODE" =~ $REGEX_MODES ]];then
         CONFIG_MODE=$ARG_MODE
     else
-        return_code=1
+        exit_code_args=1
     fi
     if [[ -f "$ARG_PATH_LOGFILE" ]];then
         CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
     else
         echo "[✗] The backup dictionary file doesn't exist "$ARG_PATH_LOGFILE
-        return_code=1
+        exit_code_args=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
         PATH_STORAGE=$PATH_STORAGE_LINODE
@@ -67,7 +69,7 @@ function args_validate ()
         PATH_STORAGE=$PATH_STORAGE_BACKBLAZE
         PATH_LOCAL_DOWNLOAD=$PATH_LOCAL_DOWNLOAD_BACKBLAZE
     fi
-    return $return_code
+    return $exit_code_args
 }
 
 function requirements ()
@@ -88,30 +90,21 @@ function check_file ()
     path_storage_base="$1"
     filename_obscured="$2"
     path_storage=$path_storage_base/$filename_obscured
-    aws_ls_retval=-1
+    exit_code_ls=-1
     echo "[→] Checking on cloud storage for path "$path_storage
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
-        linode_ls_ret=$(linode-cli obj ls $path_storage | grep $filename_obscured)
-        if [[ $linode_ls_ret = "" ]];then
-            aws_ls_retval=1
-        else
-            aws_ls_retval=0
-        fi
+      linode-cli obj ls $path_storage | grep $filename_obscured &> /dev/null
+      exit_code_ls=$?
     fi
     if [[ $CONFIG_MODE = $MODE_AWS ]];then
-        aws --profile $AWS_PROFILE s3 ls $path_storage
-        aws_ls_retval=$?
+      aws --profile $AWS_PROFILE s3 ls $path_storage
+      exit_code_ls=$?
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-        backblaze_ls_ret=$(b2 ls $path_storage_base | grep $filename_obscured)
-        if [[ $backblaze_ls_ret = "" ]];then
-            aws_ls_retval=1
-        else
-            aws_ls_retval=0
-        fi
-
+      b2 ls $path_storage_base | grep $filename_obscured &> /dev/null
+      exit_code_ls=$?
     fi
-    return $aws_ls_retval
+    return $exit_code_ls
 }
 
 function download_object ()
@@ -121,8 +114,8 @@ function download_object ()
     filename_obscured="$3"
     if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
         check_file $PATH_STORAGE $filename_obscured
-        aws_ls_retval=$?
-        if [[ $aws_ls_retval = 0 ]]; then
+        exit_code_ls=$?
+        if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
             echo "[→] Downloading the object from the cloud storage "\
             $filename_plaintext $filename_obscured
             if [[ $CONFIG_MODE = $MODE_LINODE ]];then
@@ -151,7 +144,7 @@ function download_object ()
                     $PATH_LOCAL_DOWNLOAD/$filename_obscured \
                     $PATH_LOCAL_DOWNLOAD/$filename_plaintext.gpg
             fi
-        elif [[ $aws_ls_retval = 1 ]]; then
+        elif [[ $exit_code_ls = 1 ]]; then
             echo \
                 "[✗] Object does not exist on cloud storage "\
                 $filename_plaintext $filename_obscured
