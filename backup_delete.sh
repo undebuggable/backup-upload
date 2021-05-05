@@ -17,6 +17,8 @@ PATH_STORAGE=""
 PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 PATH_FILE_CONFIG=$PATH_CURRENT/backup.config
 
+EXIT_CODE_SUCCESS=0
+
 while [[ $# -gt 0 ]]
 do
 key="$1"

@@ -116,7 +116,7 @@ function objects_lookup ()
 {
     for item_backup in $BUCKET_CONTENTS; do
       COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
-      item_details=$(grep -nH -r $item_backup $CONFIG_PATH_LOGDIR)
+      item_details=$(grep -nH -w -r $item_backup $CONFIG_PATH_LOGDIR)
       if [ $? -eq 0 ]; then
         COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))
         echo "[✔] Object known "$item_details
