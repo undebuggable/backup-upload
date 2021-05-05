@@ -64,15 +64,19 @@ Encrypt files in directory `~/backup` and upload them to the Linode object stora
 
 Encrypt and upload files with two parallel processes:
 ```bash
-backup_encrypt_upload_parallel.sh -m linode -b ~/backup -l ~/backup.log
+backup_encrypt_upload_parallel.sh -m linode -l ~/backup.log ~/backup
 ```
 Alternatively, encrypt and then upload files sequentially:
 ```bash
-backup_encrypt_upload.sh -m linode -b ~/backup -l ~/backup.log
+backup_encrypt_upload.sh -m linode -l ~/backup.log ~/backup
 ```
 Browse contents of backup described by the dictionary file `backup.log`:
 ```bash
 backup_browse.sh -m linode -l ~/backup.log
+```
+Fetch all object keys from remote storage and look them up in local dictionary files located in `~/tmp/dictionary-log-files`:
+```bash
+backup_browse_reverse.sh -m linode ~/tmp/dictionary-log-files/
 ```
 Download backup described by the dictionary file `backup.log`:
 ```bash
@@ -80,5 +84,5 @@ backup_download.sh -m linode -l ~/backup.log
 ```
 Delete from object storage the backup described by the dictionary file `backup.log`:
 ```bash
-backup_delete.sh -m linode -l ~/backup.log
+backup_delete.sh -m linode ~/backup.log
 ```

@@ -12,10 +12,10 @@ REGEX_MODES='aws|linode|backblaze'
 REGEX_FILENAME='^[a-z]{16}$'
 
 ARG_MODE=""
-ARG_PATH_LOGFILE=""
+ARG_PATH_LOGDIR=""
 
 CONFIG_MODE=""
-CONFIG_PATH_LOGFILE=""
+CONFIG_PATH_LOGDIR=""
 
 PATH_STORAGE=""
 PATH_CURRENT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
@@ -30,6 +30,8 @@ AWS_PROFILE=gjpl
 PATH_BUCKET_DETAILS=$HOME/src/src.ow.cx-infra/b2-buckets
 DATE=$(date +"%Y-%m-%d_%H-%M")
 
+BUCKET_CONTENTS=""
+
 EXIT_CODE_SUCCESS=0
 
 while [[ $# -gt 0 ]]
@@ -42,7 +44,7 @@ case $key in
     shift # past value
     ;;
     *)
-    ARG_PATH_LOGFILE="$1"
+    ARG_PATH_LOGDIR="$1"
     shift
 esac
 done
@@ -76,10 +78,10 @@ function args_validate ()
     else
         exit_code_args=1
     fi
-    if [[ -f "$ARG_PATH_LOGFILE" ]];then
-        CONFIG_PATH_LOGFILE=$ARG_PATH_LOGFILE;
+    if [[ -d "$ARG_PATH_LOGDIR" ]];then
+        CONFIG_PATH_LOGDIR=$ARG_PATH_LOGDIR;
     else
-        echo "[✗] The backup dictionary file doesn't exist "$ARG_PATH_LOGFILE
+        echo "[✗] The backup dictionary directory doesn't exist "$ARG_PATH_LOGDIR
         exit_code_args=1
     fi
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
@@ -94,96 +96,45 @@ function args_validate ()
     return $exit_code_args
 }
 
-function check_file ()
+function bucket_fetch_content ()
 {
-    path_storage_base="$1"
-    filename_obscured="$2"
-    path_storage=$path_storage_base/$filename_obscured
-    exit_code_ls=-1
-    echo "[→] Checking on cloud storage for path "$path_storage
+    exit_code_ls=1
+    echo "[→] Checking on remote storage for path "$PATH_STORAGE
     if [[ $CONFIG_MODE = $MODE_LINODE ]];then
-      linode-cli obj ls $path_storage | grep $filename_obscured &> /dev/null
-      exit_code_ls=$?
+      exit_code_ls=1
     fi
     if [[ $CONFIG_MODE = $MODE_AWS ]];then
-      aws --profile $AWS_PROFILE s3 ls $path_storage
-      exit_code_ls=$?
+      exit_code_ls=1
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-      b2 ls $path_storage_base | grep $filename_obscured &> /dev/null
+      BUCKET_CONTENTS=$(b2 ls $PATH_STORAGE)
       exit_code_ls=$?
     fi
     return $exit_code_ls
 }
-
-function parse_logfile_item ()
+function objects_lookup ()
 {
-    filename_plaintext="$1"
-    filename_obscured="$2"
-    if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
-        COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
-        check_file $PATH_STORAGE $filename_obscured
-        exit_code_ls=$?
-        if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
-            COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))
-            echo \
-                "[✔] Object exists on cloud storage "\
-                $filename_plaintext $filename_obscured
-        elif [[ $exit_code_ls = 1 ]]; then
-            COUNT_FILES_NOT_FOUND=$((COUNT_FILES_NOT_FOUND+1))
-            echo \
-                "[✗] Object does not exist on cloud storage "\
-                $filename_plaintext $filename_obscured
-        fi
-    else
-        echo \
-          "[✗] No obscured filename found for log entry "\
-          $filename_plaintext
-    fi
-}
-
-function parse_logfile ()
-{
-    exec 3< $CONFIG_PATH_LOGFILE
-
-    while read filename_plaintext <&3 ; do
-        read checksum_line <&3
-        read filename_obscured <&3
-        parse_logfile_item $filename_plaintext $filename_obscured
+    for item_backup in $BUCKET_CONTENTS; do
+      COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
+      item_details=$(grep -nH -r $item_backup $CONFIG_PATH_LOGDIR)
+      if [ $? -eq 0 ]; then
+        COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))
+        echo "[✔] Object known "$item_details
+      else
+        COUNT_FILES_NOT_FOUND=$((COUNT_FILES_NOT_FOUND+1))
+        echo "[✗] Object unknown "$item_backup
+      fi
     done
-    # Close file handle 3
-    exec 3<&-
-
     echo "[i] ("\
         $COUNT_FILES_FOUND\
         "of"\
         $COUNT_FILES_TOTAL\
-        ") objects found on the cloud storage"
+        ") objects on the remote storage are known"
     echo "[i] ("\
         $COUNT_FILES_NOT_FOUND\
         "of"\
         $COUNT_FILES_TOTAL\
-        ") objects not found on the cloud storage"
-}
-
-function buckets_fetch_list ()
-{
-    B2_BUCKETS=$(\
-        b2 list-buckets
-    )
-
-}
-function buckets_summarize ()
-{
-    for bucket_item in $B2_BUCKETS; do
-        bucket_name=$(echo $bucket_item | awk '{print $3}');
-        b2 ls --long --recursive $bucket_name \
-        > $PATH_BUCKET_DETAILS/$bucket_name-ls-$DATE.log
-        b2 ls --long --recursive --json $bucket_name \
-        > $PATH_BUCKET_DETAILS/$bucket_name-ls-$DATE.json
-        b2 get-bucket $bucket_name \
-        > $PATH_BUCKET_DETAILS/$bucket_name-get-bucket-$DATE.log
-    done
+        ") objects on the remote storage are unknown"
 }
 
 function run ()
@@ -192,8 +143,10 @@ function run ()
     args_validate
     if [ $? -eq 0 ]
     then
-      requirements
-      parse_logfile
+      bucket_fetch_content
+      if [ $? -eq 0 ]; then
+        objects_lookup
+      fi
     else
       echo "[✗] Invalid arguments"
     fi
