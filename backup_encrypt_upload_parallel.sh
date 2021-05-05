@@ -51,16 +51,14 @@ case $key in
     shift # past argument
     shift # past value
     ;;
-    -b|--path-backup)
-    ARG_PATH_BACKUP="$2"
-    shift # past argument
-    shift # past value
-    ;;
     -m|--mode)
     ARG_MODE="$2"
     shift # past argument
     shift # past value
     ;;
+    *)
+    ARG_PATH_BACKUP="$1"
+    shift
 esac
 done
 
