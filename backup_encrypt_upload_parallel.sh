@@ -189,13 +189,12 @@ function os_gpg ()
 
 function create_file_list ()
 {
-    list_files=$(ls -dlhS $CONFIG_PATH_BACKUP*)
+    list_files=$(ls -dS $CONFIG_PATH_BACKUP*)
     for list_item in $list_files
     do
-        path_backup=$(echo $list_item | awk '{print $9}');
-        if [[ -f $path_backup ]];then
+        if [[ -f $list_item ]];then
             os_uuid $((FILES_TOTAL));
-            ARR_PATH[$((FILES_TOTAL))]=$path_backup
+            ARR_PATH[$((FILES_TOTAL))]=$list_item
             FILES_TOTAL=$((FILES_TOTAL+1))
         fi
     done

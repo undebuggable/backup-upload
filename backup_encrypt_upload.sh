@@ -180,12 +180,11 @@ function os_uuid ()
 
 function create_file_list ()
 {
-    list_files=$(ls -dlhS $CONFIG_PATH_BACKUP*)
+    list_files=$(ls -dS $CONFIG_PATH_BACKUP*)
     for list_item in $list_files
     do
-        path_backup=$(echo $list_item | awk '{print $9}');
-        if [[ -f $path_backup ]];then
-            ARR_PATH[$((FILES_TOTAL))]=$path_backup
+        if [[ -f $list_item ]];then
+            ARR_PATH[$((FILES_TOTAL))]=$list_item
             FILES_TOTAL=$((FILES_TOTAL+1))
         fi
     done
