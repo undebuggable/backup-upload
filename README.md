@@ -14,6 +14,6 @@ The supported shells are `bash` and `zsh`.
 
 The utilities in this toolset provide *create*, *browse*, *read*, and *delete* operations on the backup:
 * create - `backup_encrypt_upload.sh`, `backup_encrypt_upload_parallel.sh`
-* browse - `backup_browse.sh`
+* browse - `backup_browse.sh`, `backup_browse_reverse.sh`
 * read - `backup_download.sh`
 * delete - `backup_delete.sh`

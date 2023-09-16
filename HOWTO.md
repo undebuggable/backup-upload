@@ -41,23 +41,23 @@ Running the application
 Create the configuration file `backup.config` in the root directory of this project:
 
 ```bash
-AWS_PROFILE="<awc_cli_profile_name>"
+AWS_PROFILE='<awc_cli_profile_name>'
 
-GPG_RECIPIENT="<gpg_receipient_email>"
+GPG_RECIPIENT='<gpg_receipient_email>'
 
-PATH_STORAGE_AWS="s3://<bucket_name>"
-PATH_STORAGE_LINODE="<bucket_name>"
-PATH_STORAGE_BACKBLAZE="<bucket_name>"
+PATH_STORAGE_AWS='s3://<bucket_name>'
+PATH_STORAGE_LINODE='<bucket_name>'
+PATH_STORAGE_BACKBLAZE='<bucket_name>'
 
-PATH_LOCAL_BASEDIR="/tmp"
+PATH_LOCAL_BASEDIR='/tmp'
 
-PATH_LOCAL_UPLOAD_AWS=$PATH_LOCAL_BASEDIR"/backup-upload"
-PATH_LOCAL_UPLOAD_LINODE=$PATH_LOCAL_BASEDIR"/backup-upload"
-PATH_LOCAL_UPLOAD_BACKBLAZE=$PATH_LOCAL_BASEDIR"/backup-upload"
+PATH_LOCAL_UPLOAD_AWS="${PATH_LOCAL_BASEDIR}/backup-upload"
+PATH_LOCAL_UPLOAD_LINODE="${PATH_LOCAL_BASEDIR}/backup-upload"
+PATH_LOCAL_UPLOAD_BACKBLAZE="${PATH_LOCAL_BASEDIR}/backup-upload"
 
-PATH_LOCAL_DOWNLOAD_AWS=$PATH_LOCAL_BASEDIR"/backup-download"
-PATH_LOCAL_DOWNLOAD_LINODE=$PATH_LOCAL_BASEDIR"/backup-download"
-PATH_LOCAL_DOWNLOAD_BACKBLAZE=$PATH_LOCAL_BASEDIR"/backup-download"
+PATH_LOCAL_DOWNLOAD_AWS="${PATH_LOCAL_BASEDIR}/backup-download"
+PATH_LOCAL_DOWNLOAD_LINODE="${PATH_LOCAL_BASEDIR}/backup-download"
+PATH_LOCAL_DOWNLOAD_BACKBLAZE="${PATH_LOCAL_BASEDIR}/backup-download"
 ```
 
 Encrypt files in directory `~/backup` and upload them to the Linode object storage. The backup dictionary file will be saved in file `~/backup.log`.
