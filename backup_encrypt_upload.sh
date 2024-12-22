@@ -203,7 +203,7 @@ function upload ()
         aws --profile $AWS_PROFILE s3 mv $path_to_upload $PATH_STORAGE;
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-        b2 upload-file $PATH_STORAGE $path_to_upload $UUID_CURRENT;
+        b2 file upload $PATH_STORAGE $path_to_upload $UUID_CURRENT;
     fi
     exit_code_upload=$?
     if [[ $exit_code_upload = $EXIT_CODE_SUCCESS ]]; then

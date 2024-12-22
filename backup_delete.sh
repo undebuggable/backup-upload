@@ -103,7 +103,7 @@ function parse_logfile_item ()
     filename_plaintext="$1"
     filename_obscured="$2"
     if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
-        check_file $PATH_STORAGE $filename_obscured
+        check_file "b2://${PATH_STORAGE}" $filename_obscured
         exit_code_ls=$?
         if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
             echo \
@@ -116,12 +116,7 @@ function parse_logfile_item ()
                 aws --profile $AWS_PROFILE s3 rm $PATH_STORAGE/$filename_obscured
             fi
             if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-                file_id=$(\
-                    b2 ls --long $path_storage_base | \
-                    grep $filename_obscured | \
-                    awk '{print $1}'\
-                )
-                b2 delete-file-version $file_id
+                b2 rm "b2://${PATH_STORAGE}/${filename_obscured}"
             fi
         elif [[ $exit_code_ls = 1 ]]; then
             echo \

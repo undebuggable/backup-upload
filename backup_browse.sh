@@ -113,7 +113,7 @@ function parse_logfile_item ()
     filename_obscured="$2"
     if [[ "$filename_obscured" =~ $REGEX_FILENAME ]]; then
         COUNT_FILES_TOTAL=$((COUNT_FILES_TOTAL+1))
-        check_file $PATH_STORAGE $filename_obscured
+        check_file "b2://${PATH_STORAGE}" $filename_obscured
         exit_code_ls=$?
         if [[ $exit_code_ls = $EXIT_CODE_SUCCESS ]]; then
             COUNT_FILES_FOUND=$((COUNT_FILES_FOUND+1))

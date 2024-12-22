@@ -105,7 +105,7 @@ function bucket_fetch_content ()
       exit_code_ls=1
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-      BUCKET_CONTENTS=$(b2 ls $PATH_STORAGE)
+      BUCKET_CONTENTS=$(b2 ls "b2://${PATH_STORAGE}")
       exit_code_ls=$?
     fi
     return $exit_code_ls

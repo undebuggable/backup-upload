@@ -101,7 +101,7 @@ function check_file ()
       exit_code_ls=$?
     fi
     if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
-      b2 ls $path_storage_base | grep $filename_obscured &> /dev/null
+      b2 ls "b2://${path_storage_base}" | grep $filename_obscured &> /dev/null
       exit_code_ls=$?
     fi
     return $exit_code_ls
@@ -137,8 +137,8 @@ function download_object ()
             fi
             if [[ $CONFIG_MODE = $MODE_BACKBLAZE ]];then
                 b2 \
-                    download-file-by-name \
-                    $PATH_STORAGE $filename_obscured \
+                    file download \
+                    "b2://${PATH_STORAGE}/${filename_obscured}" \
                     $PATH_LOCAL_DOWNLOAD/$filename_obscured
                 mv \
                     $PATH_LOCAL_DOWNLOAD/$filename_obscured \
